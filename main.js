@@ -1,38 +1,57 @@
 function init(){
     var scene = new THREE.Scene();
-    var gui = new dat.GUI()
+    var gui = new dat.GUI();
+    var clock = new THREE.Clock();
     
     var enableFog = false;    
-
+    
     if (enableFog){
         scene.fog = new THREE.FogExp2(0xffffff, 0.2);
     }
-
+    
     //var box = getBox(1,1,1);
     var plane = getPlane(30);
-    var spotLight = getSpotLight(1);
+    var directionalLight = getDirectionalLight(1);
     var sphere = getSphere(0.05);
     var boxGrid = getBoxGrid(10, 1.5);
+    boxGrid.name = 'boxGrid';
+    
+    var helper = new THREE.CameraHelper(directionalLight.shadow.camera);
+    
+    var conf = {color :  "#ffae23"};    
 
+    var ambientLight = getAmbientLight(conf, 2);
+    
     plane.name = 'plane-1';
 
     //box.position.y = box.geometry.parameters.height/2;
     plane.rotation.x = Math.PI/2;
-    spotLight.position.y = 2;
-    spotLight.intensity = 2;
+    directionalLight.position.x = 13;
+    directionalLight.position.y = 10;
+    directionalLight.position.z = 10;
+    directionalLight.intensity = 2;
+    
     //plane.position.x = 1;
     
     //scene.add(box);
-    scene.add(plane);
-    spotLight.add(sphere);
-    scene.add(spotLight);
-    scene.add(boxGrid);
     
-    gui.add(spotLight, 'intensity', 0, 10);
-    gui.add(spotLight.position, 'x', 0, 20);
-    gui.add(spotLight.position, 'y', 0, 20);
-    gui.add(spotLight.position, 'z', 0, 20);
-    gui.add(spotLight, 'penumbra', 0, 1);
+    scene.add(plane);
+    directionalLight.add(sphere);
+    scene.add(directionalLight);
+    scene.add(boxGrid);
+    scene.add(helper);
+    scene.add(ambientLight);
+    
+
+    
+    gui.addColor(conf, 'color').onChange( function(colorValue) {
+        ambientLight.color.set(colorValue);
+    });   
+    gui.add(directionalLight, 'intensity', 0, 10);
+    gui.add(directionalLight.position, 'x', 0, 20);
+    gui.add(directionalLight.position, 'y', 0, 20);
+    gui.add(directionalLight.position, 'z', 0, 20);
+    //gui.add(directionalLight, 'penumbra', 0, 1);
     
     var camera = new THREE.PerspectiveCamera(
         45,
@@ -54,7 +73,7 @@ function init(){
     
     var controls = new THREE.OrbitControls(camera, renderer.domElement);
 
-    update(renderer, scene, camera, controls);
+    update(renderer, scene, camera, controls, clock);
     
     return scene;
 }
@@ -142,17 +161,45 @@ function getPointLight(intensity){
     return light;
 }
 
+function getDirectionalLight(intensity){
+    var light = new THREE.DirectionalLight(0xffffff, intensity);
+    light.castShadow = true;
 
-function update(renderer, scene, camera, controls){
+    light.shadow.camera.left = -1;
+    light.shadow.camera.bottom = -1;
+    light.shadow.camera.right = 10;
+    light.shadow.camera.top = 10;
+    return light;
+}
+
+function getAmbientLight(color, intensity){
+    var light = new THREE.AmbientLight(color, intensity);
+    light.castShadow = true;
+
+    return light;
+}
+
+
+function update(renderer, scene, camera, controls, clock){
     renderer.render(
         scene,
         camera
     );
-    
     controls.update();
+    
+    var timeElapsed = clock.getElapsedTime();
+    
+
+    var boxGrid = scene.getObjectByName('boxGrid');
+    boxGrid.children.forEach(function(child, index){
+        child.scale.y = (Math.sin(timeElapsed*5 + index)+1) / 2 +0.001;
+        child.position.y = child.scale.y / 2;
+    });
+
+
 
     requestAnimationFrame(function(){
-        update(renderer, scene, camera, controls);
+        update(renderer, scene, camera, controls, clock);
     })
 }
 var scene = init();
